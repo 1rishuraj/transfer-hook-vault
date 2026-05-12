@@ -1,38 +1,65 @@
 # Transfer Hook Vault
 
-A Solana program built with Anchor that uses the **Token-2022 Transfer Hook** extension to enforce a whitelist on every token transfer. Only admin-approved users can hold or transfer the vault's token.
+A Token-2022 vault program on Solana that uses the **Transfer Hook** extension to enforce whitelisting and maintain an on-chain ledger atomically with every token movement.
 
-## How It Works
+## Overview
 
-- The admin initializes a vault and a Token-2022 mint with `TransferHook`, `MetadataPointer`, and `TokenMetadata` extensions.
-- The admin whitelists users via `add_user` / `remove_user`.
-- On every `transfer_checked`, Token-2022 automatically calls the `transfer_hook` instruction, which checks that the sender is whitelisted and updates their on-chain balance ledger.
-- **Deposit**: send `[deposit ix, transfer_checked ix]` atomically — the hook records the deposit.
-- **Withdraw**: send `[withdraw ix (approves delegate), transfer_checked ix]` atomically — the hook records the withdrawal.
+The vault issues a custom Token-2022 mint with a transfer hook attached. Every `transfer_checked` on this mint invokes the hook, which gates transfers to whitelisted users and automatically updates the ledger — no separate deposit/withdraw accounting instruction needed.
 
-> Deposit and withdraw are split from the actual token transfer to avoid Token-2022's reentrancy restriction.
+## Architecture
 
-## Instructions
+| Instruction | What it does |
+|---|---|
+| `initialize` | Creates the vault config PDA and the Token-2022 mint with TransferHook + MetadataPointer extensions |
+| `add_user` | Admin whitelists a user by creating their `UserAccount` PDA |
+| `remove_user` | Admin removes a user and closes their `UserAccount` PDA |
+| `init_extra_acc_meta` | Initializes the extra account meta list required by Token-2022 for hook resolution |
+| `withdraw` | Checks ledger balance and issues a delegate `approve` — client must follow with `transfer_checked` in the same tx |
 
-| Instruction | Who | Description |
-|---|---|---|
-| `initialize` | Admin | Creates vault PDA + Token-2022 mint |
-| `add_user` | Admin | Whitelists a user |
-| `remove_user` | Admin | Removes a user from whitelist |
-| `init_extra_acc_meta` | Anyone | Registers extra accounts for the hook |
-| `transfer_hook` | Token-2022 (auto) | Validates sender is whitelisted |
-| `withdraw` | User | Approves delegate + decrements ledger |
+The `transfer_hook` handles three cases on every token movement:
+
+- **Deposit** (tokens → vault ATA): increments `user_account.amount`
+- **Withdrawal** (tokens ← vault ATA): decrements `user_account.amount`
+- **User-to-user**: whitelist check only
+
+## Prerequisites
+
+- Rust + Cargo
+- Anchor CLI
+- Solana CLI
 
 ## Build & Test
 
 ```bash
-make build   # build the program
-make test    # run all tests (uses LiteSVM — no local validator needed)
-make all     # clean, build, and test
+anchor build
+anchor test
 ```
 
-## Tech Stack
+Tests run against `litesvm` (local SVM) — no validator needed.
 
-- **Anchor** — Solana framework
-- **Token-2022** — SPL token with Transfer Hook extension
-- **LiteSVM** — in-process Solana VM for fast testing
+## Program Structure
+
+```
+programs/transfer-hook-vault/src/
+├── lib.rs
+├── constants.rs
+├── error.rs
+├── state/
+│   ├── vault.rs
+│   └── user_account.rs
+└── instructions/
+    ├── initialize.rs
+    ├── add_user.rs
+    ├── remove_user.rs
+    ├── init_extra_acc_meta.rs
+    ├── transfer_hook.rs
+    └── withdraw.rs
+```
+
+## Key PDAs
+
+| Account | Seeds |
+|---|---|
+| Vault config | `["vault_config", admin_pubkey]` |
+| User account | `["whitelist", user_pubkey]` |
+| Extra account meta list | `["extra-account-metas", mint_pubkey]` |
