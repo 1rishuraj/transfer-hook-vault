@@ -55,7 +55,6 @@ impl<'info> Withdraw<'info> {
             amount,
         )?;
 
-        // REMOVED: self.user_account.amount subtraction — now done in transfer hook CASE 2
 
         msg!("Approved withdrawal of {} tokens", amount);
         Ok(())

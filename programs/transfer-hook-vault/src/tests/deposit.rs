@@ -16,7 +16,6 @@ fn test_deposit() {
     svm.airdrop(&user.pubkey(), 5 * 1_000_000_000).unwrap();
 
     let user_account_pda = do_add_user(&mut svm, &admin, &vault_pda, &user_pk);
-    // CHANGED: pass vault_pda
     let extra_acc_meta_list = do_init_extra_acc_meta(&mut svm, &admin, &mint_pk, &vault_pda);
 
     let user_ata = do_create_ata(&mut svm, &user, user_pk, mint_pk);
@@ -27,7 +26,6 @@ fn test_deposit() {
 
     let deposit_amount: u64 = 500_000_000_000;
 
-    // CHANGED: no deposit_ix — hook handles user_account.amount update
     let transfer_ix = build_transfer_checked_ix(
         &user_ata,
         &mint_pk,
@@ -37,7 +35,7 @@ fn test_deposit() {
         9,
         extra_acc_meta_list,
         user_account_pda,
-        vault_pda, // CHANGED: added
+        vault_pda, 
     );
 
     send_ixs(&mut svm, &[transfer_ix], &user, &[]);
@@ -55,6 +53,5 @@ fn test_deposit() {
     let user_acc = svm.get_account(&&user_account_pda).unwrap();
     let user_acc_data =
         crate::state::UserAccount::try_deserialize(&mut user_acc.data.as_ref()).unwrap();
-    // CHANGED: amount now set by hook, not deposit_ix
     assert_eq!(user_acc_data.amount, deposit_amount);
 }

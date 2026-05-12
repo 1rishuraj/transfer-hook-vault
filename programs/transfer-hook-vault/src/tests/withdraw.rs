@@ -28,7 +28,6 @@ fn setup_for_withdraw() -> (
     svm.airdrop(&user.pubkey(), 5 * 1_000_000_000).unwrap();
 
     let user_account_pda = do_add_user(&mut svm, &admin, &vault_pda, &user_pk);
-    // CHANGED: pass vault_pda
     let extra_acc_meta_list = do_init_extra_acc_meta(&mut svm, &admin, &mint_pk, &vault_pda);
 
     let user_ata = do_create_ata(&mut svm, &user, user_pk, mint_pk);
@@ -39,7 +38,6 @@ fn setup_for_withdraw() -> (
 
     let deposit_amount: u64 = 500_000_000_000;
 
-    // CHANGED: no deposit_ix — just transfer_checked, hook updates ledger
     let transfer_ix = build_transfer_checked_ix(
         &user_ata,
         &mint_pk,
@@ -49,7 +47,7 @@ fn setup_for_withdraw() -> (
         9,
         extra_acc_meta_list,
         user_account_pda,
-        vault_pda, // CHANGED: added
+        vault_pda, 
     );
 
     send_ixs(&mut svm, &[transfer_ix], &user, &[]);
@@ -104,7 +102,6 @@ fn test_withdraw() {
         .data(),
     };
 
-    // CHANGED: vault_pda added; whitelist writable — hook decrements amount in CASE 2
     let transfer_ix = build_transfer_checked_ix(
         &vault_ata,
         &mint_pk,
@@ -114,7 +111,7 @@ fn test_withdraw() {
         9,
     extra_acc_meta_list,
     user_account_pda,
-    vault_pda, // CHANGED: added
+    vault_pda, 
     );
 
     send_ixs(&mut svm, &[withdraw_ix, transfer_ix], &user, &[]);
@@ -136,7 +133,6 @@ fn test_withdraw() {
     let user_acc = svm.get_account(&&user_account_pda).unwrap();
     let user_acc_data =
         crate::state::UserAccount::try_deserialize(&mut user_acc.data.as_ref()).unwrap();
-    // CHANGED: amount now decremented by hook CASE 2, not withdraw ix
     assert_eq!(user_acc_data.amount, deposit_amount - withdraw_amount);
 }
 
@@ -156,7 +152,6 @@ fn test_withdraw_insufficient_funds() {
     ) = setup_for_withdraw();
 
     let user_pk = user.pubkey();
-    // CHANGED: amount exceeds ledger balance — withdraw ix should reject this
     let withdraw_amount = deposit_amount + 1;
 
     let withdraw_accounts = crate::accounts::Withdraw {

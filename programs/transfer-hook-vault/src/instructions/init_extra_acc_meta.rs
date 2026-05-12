@@ -23,7 +23,6 @@ pub struct InitExtraAccountMeta<'info> {
 
     pub mint: InterfaceAccount<'info, Mint>,
 
-    // CHANGED: vault added so we can store its pubkey literally in the meta list
     #[account(
         seeds = [VAULT_CONFIG.as_bytes(), vault.admin.as_ref()],
         bump = vault.bump,
@@ -36,7 +35,6 @@ pub struct InitExtraAccountMeta<'info> {
 
 impl<'info> InitExtraAccountMeta<'info> {
     pub fn init_extra_account_meta(&mut self, bump: &InitExtraAccountMetaBumps) -> Result<()> {
-        // CHANGED: pass vault key so it can be stored literally
         let get_acc_meta = Self::extra_acc_meta(self.vault.key())?;
 
         let space = ExtraAccountMetaList::size_of(get_acc_meta.len())
@@ -89,12 +87,10 @@ impl<'info> InitExtraAccountMeta<'info> {
                     spl_tlv_account_resolution::seeds::Seed::AccountKey { index: 3 },
                 ],
                 false,
-                true, // CHANGED: writable — hook mutates amount
+                true, 
             )
             .map_err(|_| ErrorCode::ExtraAccountMetaError)?,
 
-            // CHANGED: index 6: vault PDA stored as literal pubkey — no seed
-            // resolution needed at transfer time, cleanest approach
             ExtraAccountMeta::new_with_pubkey(&vault_key, false, false)
                 .map_err(|_| ErrorCode::ExtraAccountMetaError)?,
         ])

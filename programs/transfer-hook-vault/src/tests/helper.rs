@@ -196,7 +196,7 @@ pub fn do_init_extra_acc_meta(
         payer: admin_pk,
         extra_acc_meta_list,
         mint: *mint_pk,
-        vault: *vault_pda,        // CHANGED: now wired in
+        vault: *vault_pda,        
         system_program: system_program_id(),
         token_program: token_2022_program_id(),
     }
@@ -255,9 +255,6 @@ pub fn do_mint_tokens(
     send_ix(svm, ix, admin, &[]);
 }
 
-// CHANGED: takes vault_pda; appended as writable extra account so hook can
-// compare source/dest token owner against vault key, and whitelist is now
-// writable since the hook mutates user_account.amount
 #[allow(clippy::too_many_arguments)]
 pub fn build_transfer_checked_ix(
     source: &Pubkey,
@@ -268,7 +265,7 @@ pub fn build_transfer_checked_ix(
     decimals: u8,
     extra_account_meta_list: Pubkey,
     whitelist_pda: Pubkey,
-    vault_pda: Pubkey, // CHANGED: added
+    vault_pda: Pubkey, 
 ) -> Instruction {
     let tc_base = spl_token_2022::instruction::transfer_checked(
         &token_2022_program_id(),
@@ -298,17 +295,16 @@ pub fn build_transfer_checked_ix(
         is_signer: false,
         is_writable: false,
     });
-    // whitelist PDA — CHANGED: writable, hook writes amount
     accounts.push(AccountMeta {
         pubkey: (whitelist_pda),
         is_signer: false,
-        is_writable: true, // CHANGED
+        is_writable: true, 
     });
-    // vault PDA — CHANGED: added so hook can compare owner keys
+    // vault PDA —
     accounts.push(AccountMeta {
         pubkey: (vault_pda),
         is_signer: false,
-        is_writable: false, // CHANGED: added
+        is_writable: false, 
     });
     // hook program itself
     accounts.push(AccountMeta {

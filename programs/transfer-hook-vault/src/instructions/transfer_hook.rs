@@ -32,17 +32,14 @@ pub struct TransferHook<'info> {
     )]
     pub extra_account_meta_list: UncheckedAccount<'info>,
 
-    // CHANGED: whitelist is now optional — vault-to-vault or non-whitelisted
-    // transfers still need the account in the meta list, but we gate on it
-    // only for non-deposit paths. We keep it required here; see hook logic.
+
     #[account(
-        mut,                          // CHANGED: mut so we can write amount
+        mut,                         
         seeds = [WHITELIST_ENTRY.as_bytes(), owner.key().as_ref()],
         bump = whitelist.bump,
     )]
     pub whitelist: Account<'info, UserAccount>,
 
-    // CHANGED: vault added so we can compare owner keys
     #[account(
         seeds = [VAULT_CONFIG.as_bytes(), vault.admin.as_ref()],
         bump = vault.bump,
